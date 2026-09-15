@@ -41,7 +41,12 @@ public sealed record TikTokToken(
     [property: JsonPropertyName("open_id")] string? OpenId,
     DateTimeOffset SavedAt)
 {
-    public DateTimeOffset AccessExpiresAt => SavedAt.AddSeconds(AccessTokenExpireIn);
+    // TikTok Shop returns access_token_expire_in as a Unix timestamp (seconds),
+    // while older integrations may return a duration. Accept both forms so a
+    // deployed service refreshes the token before it really expires.
+    public DateTimeOffset AccessExpiresAt => AccessTokenExpireIn >= 1_000_000_000
+        ? DateTimeOffset.FromUnixTimeSeconds(AccessTokenExpireIn)
+        : SavedAt.AddSeconds(AccessTokenExpireIn);
 }
 
 public sealed record Warehouse(string Id, string Name, string LocationText, WarehouseRegion Region);

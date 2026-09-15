@@ -215,6 +215,11 @@ public sealed class DailyAuditWorker(IServiceScopeFactory scopes, IOptions<Audit
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // IIS can recycle outside the scheduled window.  When that happens, produce
+        // the first report for the current Vietnam business day instead of making
+        // the merchant wait until the next 08:00 run.
+        await RunInitialAuditIfNeededAsync(stoppingToken);
+
         while (!stoppingToken.IsCancellationRequested)
         {
             var now = clock.VietnamNow;
@@ -230,5 +235,31 @@ public sealed class DailyAuditWorker(IServiceScopeFactory scopes, IOptions<Audit
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
             catch (Exception ex) { logger.LogError(ex, "Daily audit failed"); }
         }
+    }
+
+    private async Task RunInitialAuditIfNeededAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var scope = scopes.CreateScope();
+            var token = await scope.ServiceProvider.GetRequiredService<ITokenVault>().GetAsync(cancellationToken);
+            if (token is null)
+            {
+                logger.LogInformation("Startup audit skipped because TikTok Shop has not been authorized.");
+                return;
+            }
+
+            var reports = scope.ServiceProvider.GetRequiredService<IReportRepository>();
+            var latest = await reports.LatestAsync(cancellationToken);
+            if (latest?.GeneratedAt.Date == clock.VietnamNow.Date)
+            {
+                logger.LogInformation("Startup audit skipped because today's report already exists.");
+                return;
+            }
+
+            await scope.ServiceProvider.GetRequiredService<AuditRunner>().RunAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+        catch (Exception ex) { logger.LogError(ex, "Startup audit failed"); }
     }
 }

@@ -8,7 +8,7 @@ API ASP.NET Core MVC chỉ đọc dữ liệu TikTok Shop để kiểm tra lệc
 - `GET /oauth/tiktok/callback`: nhận kết quả ủy quyền. Địa chỉ này phải trùng với Redirect URL trong Partner Center.
 - `POST /api/sync/run`: chạy báo cáo ngay; yêu cầu header `X-Admin-Key`.
 - `GET /api/reports/latest`: lấy báo cáo đã tổng hợp, không bao gồm tên, số điện thoại hay địa chỉ chi tiết của khách.
-- Tự chạy mỗi ngày theo `Audit:RunAtLocalTime`; kết quả được gộp thành một báo cáo để tránh gửi nhiều tin.
+- Tự chạy một lần khi API khởi động nếu hôm đó chưa có báo cáo, rồi chạy mỗi ngày theo `Audit:RunAtLocalTime`; kết quả được gộp thành một báo cáo để tránh gửi nhiều tin.
 
 Quy tắc đã đặt:
 
