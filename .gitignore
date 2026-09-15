@@ -1,0 +1,6 @@
+bin/
+obj/
+publish/
+logs/
+App_Data/
+appsettings.Production.json
